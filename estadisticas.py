@@ -1,6 +1,8 @@
 # --- START OF FILE estadisticas.py ---
 
 from psycopg2.extras import RealDictCursor
+import psycopg2
+import logging
 
 def obtener_pregunta_mas_equivocada(conn, usuario_id):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -99,4 +101,4 @@ def obtener_estadisticas_todas_las_preguntas(conn):
          raise
     except Exception as e:
          logging.error(f"Unexpected error in obtener_estadisticas_todas_las_preguntas: {e}")
-         raise # Re-raise para que la página admin lo maneje
+         raise
