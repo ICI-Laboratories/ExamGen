@@ -1,10 +1,31 @@
+# Byte-compiled / optimized / DLL files
 *.pyc
-*pyo
+*.pyo
+*.pyd
+__pycache__/
+
+# Distribución / packaging
+build/
+dist/
+*.egg-info/
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+.env/
+
+# Archivos de configuración/env
+.env
+
+# Archivos de registro
+*.log
+
+# Archivos temporales del sistema
 *.swp
 *~
-\#pycache#
-/venv
-/dist
-/build
-*.egg-info/
-__pycache__/
+*.DS_Store
+#pycache#  # Parece un typo, lo dejé comentado
+
+# Streamlit
+.streamlit/

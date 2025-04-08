@@ -1,35 +1,63 @@
+# --- START OF FILE utils.py ---
+
 import hashlib
 import json
-import re
+import re # Keep re in case needed elsewhere, but not for clean_json_response
 import streamlit as st
 from datetime import datetime
 
 def calcular_hash_completo(preguntas_json):
-    return hashlib.md5(json.dumps(preguntas_json, sort_keys=True).encode('utf-8')).hexdigest()
+    """Calculates MD5 hash of the questions JSON for duplicate detection."""
+    serialized = json.dumps(preguntas_json, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    return hashlib.md5(serialized).hexdigest()
 
-def clean_json_response(generated_text):
-    generated_text = generated_text.replace("\n", "").replace("\r", "").strip()
-    generated_text = re.sub(r',\s*}', '}', generated_text)
-    generated_text = re.sub(r',\s*]', ']', generated_text)
-    generated_text = re.sub(r'(\d+):', '', generated_text)
-    return generated_text
+# REMOVED clean_json_response function
 
-def enumerar_opciones(opciones):
-    # Retornar las opciones tal cual están, ya que contienen las letras
-    opciones_enumeradas = opciones  # Las claves ya son 'A', 'B', 'C', etc.
-    return opciones_enumeradas
+def enumerar_opciones(opciones_dict):
+    """Ensures options are returned as a dictionary with uppercase keys A, B, C, D."""
+    if not isinstance(opciones_dict, dict):
+        st.error(f"Error interno: Se esperaba un diccionario de opciones, se recibió {type(opciones_dict)}")
+        return {}
 
-def verificar_respuestas(respuestas_seleccionadas, preguntas):
-    incorrectas = []
-    resultados = []
+    standardized_options = {str(k).upper(): v for k, v in opciones_dict.items()}
+    valid_keys = {"A", "B", "C", "D"}
+    final_options = {k: standardized_options[k] for k in valid_keys if k in standardized_options}
+    return final_options
 
-    for i, pregunta in enumerate(preguntas):
-        seleccionada = respuestas_seleccionadas[i].strip().upper()
-        correcta = pregunta["correct_answer"].strip().upper()
+
+def verificar_respuestas(respuestas_seleccionadas_dict, preguntas_actuales):
+    """
+    Verifies user answers against correct answers.
+
+    Args:
+        respuestas_seleccionadas_dict (dict): {index: 'selected_letter'}
+        preguntas_actuales (list): List of question dictionaries.
+
+    Returns:
+        tuple: (list_of_incorrect_question_dicts, list_of_boolean_results)
+    """
+    incorrectas_info = []
+    resultados_bool = []
+
+    for i, pregunta in enumerate(preguntas_actuales):
+        seleccionada = respuestas_seleccionadas_dict.get(i, "").strip().upper()
+        correcta = pregunta.get("correct_answer", "").strip().upper()
+
         if seleccionada == correcta:
-            resultados.append(True)
+            resultados_bool.append(True)
         else:
-            resultados.append(False)
-            incorrectas.append(pregunta)
+            resultados_bool.append(False)
+            incorrectas_info.append({
+                 "index": i,
+                 "pregunta_id": pregunta.get("id"),
+                 "question": pregunta.get("question"),
+                 "selected": seleccionada if seleccionada else "No respondida",
+                 "correct": correcta
+            })
 
-    return incorrectas, resultados
+    indices_incorrectos = {info['index'] for info in incorrectas_info}
+    preguntas_incorrectas_list = [p for i, p in enumerate(preguntas_actuales) if i in indices_incorrectos]
+
+    return preguntas_incorrectas_list, resultados_bool
+
+# --- END OF FILE utils.py ---
