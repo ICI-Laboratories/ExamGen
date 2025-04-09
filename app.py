@@ -17,7 +17,6 @@ if not st.experimental_user.is_logged_in:
         st.login()
     st.stop() # Detiene la ejecución del script aquí si no está logueado
 
-# --- Si el script continúa, el usuario ESTÁ logueado ---
 
 # 3. Conexión a BD (ahora que sabemos que el usuario está logueado)
 try:
