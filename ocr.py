@@ -1,34 +1,58 @@
-import fitz  # PyMuPDF
+import fitz 
 from PIL import Image
 from io import BytesIO
 import easyocr
+import logging
 
-reader = easyocr.Reader(['en', 'es'], gpu=True)
+logger = logging.getLogger(__name__)
+try:
+    # Initialize reader only once
+    reader = easyocr.Reader(['en', 'es'], gpu=True)
+    logger.info("EasyOCR reader initialized successfully.")
+except Exception as e:
+    logger.error(f"Failed to initialize EasyOCR reader: {e}. OCR will likely fail.")
+    reader = None
 
-def extract_text_with_ocr(file):
+
+def extract_text_and_pages_with_ocr(file_bytes): # Pass file_bytes directly
     """
-    Extrae texto de un PDF. Si no hay texto directo, usa OCR con EasyOCR.
+    Extracts text from each page of a PDF.
+    Returns a list of dictionaries, each with 'page_number' and 'text'.
+    Also returns total page count.
     """
-    doc = fitz.open(stream=file.read(), filetype="pdf")
-    extracted_text = ""
+    if reader is None:
+        raise RuntimeError("EasyOCR reader is not initialized. Cannot perform OCR.")
 
-    for page_num in range(len(doc)):
+    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    pages_data = []
+    total_pages = len(doc)
+
+    for page_num in range(total_pages):
+        page_text_content = ""
         page = doc[page_num]
-        # Intentar extraer texto directamente
+        
+        # Attempt to extract text directly
         text = page.get_text()
-        if text.strip():  # Si hay texto directo, usarlo
-            extracted_text += text
-        else:  # Si no hay texto, realizar OCR en la página como imagen
-            pix = page.get_pixmap(dpi=200)  # Convertir página a imagen
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        if text and text.strip():
+            page_text_content = text
+        else:  # If no direct text, perform OCR
+            try:
+                pix = page.get_pixmap(dpi=200)
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img_byte_arr = BytesIO()
+                img.save(img_byte_arr, format="PNG")
+                img_byte_arr = img_byte_arr.getvalue()
+                
+                ocr_results = reader.readtext(img_byte_arr, detail=0)
+                page_text_content = " ".join(ocr_results)
+            except Exception as ocr_page_err:
+                logger.error(f"Error during OCR for page {page_num + 1}: {ocr_page_err}")
+                page_text_content = f"[OCR Error on page {page_num + 1}]"
 
-            # Convertir PIL Image a bytes
-            img_bytes = BytesIO()
-            img.save(img_bytes, format="PNG")
-            img_bytes = img_bytes.getvalue()
+        pages_data.append({
+            "page_number": page_num + 1, # 1-indexed for user display
+            "text": page_text_content.strip()
+        })
+        logger.debug(f"Extracted text for page {page_num + 1} (length: {len(page_text_content)})")
 
-            # Usar OCR para procesar la imagen
-            ocr_text = " ".join(reader.readtext(img_bytes, detail=0))  # OCR
-            extracted_text += ocr_text + "\n"
-
-    return extracted_text
+    return pages_data, total_pages
