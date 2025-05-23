@@ -695,5 +695,4 @@ def get_user_activity_summary(conn):
     except Exception as e:
         logger.error(f"Error en get_user_activity_summary: {e}", exc_info=True)
         if "transaction is aborted" in str(e).lower(): conn.rollback()
-        # raise # Decide if this should break the app or return partial data
-    return summary # Return partial/empty summary on error
+    return summary 
