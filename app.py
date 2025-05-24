@@ -35,7 +35,7 @@ except Exception as e:
     st.error("Error crítico al conectar con la base de datos. Por favor, contacta al administrador.")
     st.stop() 
 
-st.title(f"Bienvenido a QGenerator Pro, {st.user.name}! 🧠") 
+st.title(f"Bienvenido a MemorIA, {st.user.name}! 🧠") 
 
 st.markdown("""
 Esta aplicación utiliza modelos de lenguaje locales (a través de LM Studio) y OCR
