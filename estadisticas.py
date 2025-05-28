@@ -1,4 +1,9 @@
 # --- START OF FILE estadisticas.py ---
+# MIT License — 2025
+# Copyright (c) 2025
+# Yohana Yamille Ornelas Ochoa, Kenya Alexandra Ramos Valadez,
+# Pedro Antonio Ibarra Facio
+
 import streamlit as st # Para mostrar errores o información en algunos casos
 from psycopg2.extras import RealDictCursor
 import psycopg2 # Para psycopg2.Error

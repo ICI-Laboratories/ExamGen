@@ -1,4 +1,9 @@
 # --- START OF FILE pages/2_✍️_Realizar_Cuestionario.py ---
+# MIT License — 2025
+# Copyright (c) 2025
+# Yohana Yamille Ornelas Ochoa, Kenya Alexandra Ramos Valadez,
+# Pedro Antonio Ibarra Facio
+
 import streamlit as st
 from database import (
     get_db_connection,

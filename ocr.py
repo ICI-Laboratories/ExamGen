@@ -1,3 +1,9 @@
+# MIT License — 2025
+# Copyright (c) 2025
+# Yohana Yamille Ornelas Ochoa, Kenya Alexandra Ramos Valadez,
+# Pedro Antonio Ibarra Facio
+
+
 import fitz 
 from PIL import Image
 from io import BytesIO

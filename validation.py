@@ -1,4 +1,8 @@
 # --- START OF FILE validation.py ---
+# MIT License — 2025
+# Copyright (c) 2025
+# Yohana Yamille Ornelas Ochoa, Kenya Alexandra Ramos Valadez,
+# Pedro Antonio Ibarra Facio
 
 from jsonschema import validate, ValidationError
 import streamlit as st
