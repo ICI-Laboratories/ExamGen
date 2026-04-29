@@ -1,116 +1,95 @@
 # ExamGen
 
-Generador automático de exámenes y tarjetas de estudio basado en **repetición espaciada** y **active recall**. Utiliza **Streamlit**, **OpenAI** y **PostgreSQL** para ofrecer una plataforma interactiva que convierte tus apuntes en evaluaciones personalizadas.
+ExamGen es una aplicación web para generar preguntas de opción múltiple a partir de documentos PDF. Combina extracción de texto, OCR, generación con modelos locales mediante LM Studio y seguimiento de respuestas en PostgreSQL.
 
----
+## Funcionalidades
 
-## ✨ Funcionalidades principales
+| Módulo | Descripción |
+| --- | --- |
+| Generación de preguntas | Carga PDFs, extrae texto por página y genera preguntas validadas en JSON. |
+| Cuestionario | Presenta lotes de preguntas, registra respuestas y conserva el progreso por usuario. |
+| Estadísticas personales | Muestra desempeño por documento, pregunta más fallada y tiempo promedio de respuesta. |
+| Dashboard administrativo | Consolida métricas de uso, documentos, generación, preguntas y feedback. |
 
-| Módulo                                | Descripción                                                                                                                      |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Carga de PDF/Markdown**             | Extrae texto con OCR (EasyOCR) y PyMuPDF, normaliza y guarda en PostgreSQL.                                                      |
-| **Generación de preguntas**           | Llama al modelo OpenAI (GPT‑4o) para crear preguntas de opción múltiple y tarjetas tipo *flashcard*.                             |
-| **Algoritmo de repetición espaciada** | Programa la práctica según la curva de olvido de Ebbinghaus; registra desempeño por usuario.                                     |
-| **Dashboard de progreso**             | Métricas clave: precisión, tiempo de respuesta, próximos repasos. Visualizado con pandas + matplotlib + Streamlit native charts. |
-| **Exportación**                       | Permite descargar conjuntos de preguntas en CSV o PDF.                                                                           |
+## Tecnologías
 
----
+| Componente | Uso |
+| --- | --- |
+| Python 3.11+ | Runtime de la aplicación. |
+| Streamlit | Interfaz web, autenticación y manejo de sesión. |
+| LM Studio API | Generación local de preguntas mediante endpoint de chat compatible. |
+| PostgreSQL | Persistencia de documentos, preguntas, progreso, sesiones, intentos y feedback. |
+| EasyOCR y PyMuPDF | Extracción de texto y OCR desde PDFs. |
+| pandas y matplotlib | Tablas y visualizaciones del dashboard. |
 
-## ⚙️ Tecnologías
-
-* **Python 3.11**
-* **Streamlit 1.35**
-* **OpenAI Python 1.30**
-* **PostgreSQL 15** + SQLAlchemy
-* **EasyOCR** y **PyMuPDF** para OCR/parseo
-* **pandas / matplotlib / plotly** para análisis y gráficas
-
----
-
-## 🚀 Instalación rápida
+## Instalación
 
 ```bash
-# 1. Clonar el repositorio
-$ git clone https://github.com/<usuario>/examgen.git
-$ cd examgen
+git clone https://github.com/<usuario>/examgen.git
+cd examgen
 
-# 2. Crear entorno virtual
-$ python -m venv .venv
-$ source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 
-# 3. Instalar dependencias
-$ pip install -r requirements.txt
-
-# 4. Configurar variables de entorno
-$ cp .env.example .env  # y edita OPENAI_API_KEY, DATABASE_URL, etc.
-
-# 5. Crear la base de datos (PostgreSQL)
-$ createdb examgen
-
-# 6. Ejecutar la aplicación
-$ streamlit run app.py
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
----
+En macOS o Linux, activa el entorno con:
 
-## 🖼️ Capturas de pantalla
-
-| Inicio              | Generador           | Dashboard           |
-| ------------------- | ------------------- | ------------------- |
-| \_screenshot\_1.png | \_screenshot\_2.png | \_screenshot\_3.png |
-
-*(Agrega imágenes en la carpeta `docs/` y actualiza las rutas).*
-
----
-
-## 📝 Uso
-
-1. Sube tus apuntes en PDF o Markdown.
-2. Ajusta el número de preguntas y tipo de respuesta.
-3. Resuelve el cuestionario generado y registra tu puntuación.
-4. Revisa tu dashboard para ver progreso y próximos repasos.
-
-> Los datos se guardan de forma local en tu propia instancia de PostgreSQL; no enviamos información sensible a terceros.
-
----
-
-## 📐 Arquitectura resumida
-
-```
-┌───────────────┐        ┌───────────────┐
-│   Streamlit   │  API   │   OpenAI GPT  │
-└───────┬───────┘        └───────┬───────┘
-        │                        │
-        │ SQLAlchemy             │
-        ▼                        ▼
-  ┌────────────┐          ┌────────────┐
-  │ PostgreSQL │◀────────▶│   modelos  │
-  └────────────┘          └────────────┘
+```bash
+source .venv/bin/activate
 ```
 
----
+## Configuración
 
-## 🤝 Contribuciones
+1. Crea una base de datos PostgreSQL para la aplicación.
+2. Copia `secrets.example.toml` como `.streamlit/secrets.toml`.
+3. Ajusta las credenciales de base de datos y los correos administradores.
+4. Si LM Studio usa una URL distinta, define `LMSTUDIO_URL` en el entorno o en un archivo `.env`.
 
-¡Toda ayuda es bienvenida! Si deseas contribuir:
+Ejemplo de `.env`:
 
-1. Crea un *fork* del repositorio.
-2. Crea una rama con tu nueva funcionalidad (`git checkout -b feature/mi-funcion`).
-3. Envía un *pull request* describiendo tus cambios.
+```env
+LMSTUDIO_URL=http://localhost:1234/v1/chat/completions
+LMSTUDIO_MAX_OUTPUT_TOKENS=2048
+```
 
+Ejecuta la aplicación con:
 
----
+```bash
+streamlit run app.py
+```
 
-## 👥 Autores
+## Uso
 
-* **Yohana Yamille Ornelas Ochoa** (@yohana0609)
-* **Kenya Alexandra Ramos Valadez** (@kenini8)
-* **Pedro Antonio Ibarra Facio** (@Peter24a)
+1. Inicia sesión en la aplicación.
+2. Sube un PDF desde la página de generación.
+3. Selecciona páginas y número de preguntas.
+4. Genera, valida y guarda las preguntas.
+5. Responde cuestionarios y consulta tus estadísticas.
 
----
+## Estructura
 
-## 📄 Licencia
+```text
+app.py                         Entrada principal de Streamlit
+database.py                    Esquema, conexión y operaciones de PostgreSQL
+lmstudio_api.py                Cliente para generación de preguntas
+ocr.py                         Extracción de texto y OCR de PDFs
+validation.py                  Esquema JSON y validación
+utils.py                       Utilidades compartidas
+pages/admin_dashboard.py       Dashboard administrativo
+pages/generar_preguntas.py     Flujo de carga y generación
+pages/realizar_cuestionario.py Flujo de cuestionarios
+pages/estadisticas_usuario.py  Estadísticas personales
+```
 
-Este proyecto se distribuye bajo los términos de la **Licencia MIT**.
+## Autores
 
----
+* Yohana Yamille Ornelas Ochoa (@yohana0609)
+* Kenya Alexandra Ramos Valadez (@kenini8)
+* Pedro Antonio Ibarra Facio (@Peter24a)
+
+## Licencia
+
+Este proyecto se distribuye bajo los términos de la Licencia MIT.

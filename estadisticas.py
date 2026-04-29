@@ -1,12 +1,5 @@
-# --- START OF FILE estadisticas.py ---
-# MIT License — 2025
-# Copyright (c) 2025
-# Yohana Yamille Ornelas Ochoa, Kenya Alexandra Ramos Valadez,
-# Pedro Antonio Ibarra Facio
-
-import streamlit as st # Para mostrar errores o información en algunos casos
 from psycopg2.extras import RealDictCursor
-import psycopg2 # Para psycopg2.Error
+import psycopg2
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,7 +16,8 @@ def obtener_pregunta_mas_equivocada_usuario(conn, usuario_id: str):
         return None
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     er.pregunta_id,
                     p.question AS pregunta_texto,
@@ -34,15 +28,24 @@ def obtener_pregunta_mas_equivocada_usuario(conn, usuario_id: str):
                 GROUP BY er.pregunta_id, p.question
                 ORDER BY numero_errores DESC
                 LIMIT 1;
-            """, (usuario_id,))
+            """,
+                (usuario_id,),
+            )
             return cur.fetchone()
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB obteniendo pregunta más equivocada para '{usuario_id}': {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
-        # No relanzar para no romper la UI, pero el error está logueado.
+        logger.error(
+            f"Error DB obteniendo pregunta más equivocada para '{usuario_id}': {db_err}",
+            exc_info=True,
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
+
         return None
     except Exception as e:
-        logger.error(f"Error inesperado obteniendo pregunta más equivocada para '{usuario_id}': {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado obteniendo pregunta más equivocada para '{usuario_id}': {e}",
+            exc_info=True,
+        )
         return None
 
 
@@ -54,23 +57,39 @@ def obtener_promedio_tiempo_respuesta_usuario(conn, usuario_id: str):
         return None
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT AVG(tiempo_respuesta_seconds) AS promedio_segundos
                 FROM estadisticas_respuestas
                 WHERE usuario_id = %s AND tiempo_respuesta_seconds IS NOT NULL;
-            """, (usuario_id,))
+            """,
+                (usuario_id,),
+            )
             row = cur.fetchone()
-            return row["promedio_segundos"] if row and row["promedio_segundos"] is not None else None
+            return (
+                row["promedio_segundos"]
+                if row and row["promedio_segundos"] is not None
+                else None
+            )
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB obteniendo promedio tiempo respuesta para '{usuario_id}': {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB obteniendo promedio tiempo respuesta para '{usuario_id}': {db_err}",
+            exc_info=True,
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
         return None
     except Exception as e:
-        logger.error(f"Error inesperado obteniendo promedio tiempo respuesta para '{usuario_id}': {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado obteniendo promedio tiempo respuesta para '{usuario_id}': {e}",
+            exc_info=True,
+        )
         return None
 
 
-def obtener_estadisticas_por_documento_para_usuario(conn, documento_id: int, usuario_id: str):
+def obtener_estadisticas_por_documento_para_usuario(
+    conn, documento_id: int, usuario_id: str
+):
     """
     Obtiene estadísticas detalladas por pregunta para un usuario específico en un documento dado.
     Incluye preguntas del documento incluso si el usuario no las ha respondido.
@@ -79,7 +98,8 @@ def obtener_estadisticas_por_documento_para_usuario(conn, documento_id: int, usu
         return []
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     p.id AS pregunta_id,
                     p.question AS pregunta_texto,
@@ -91,20 +111,28 @@ def obtener_estadisticas_por_documento_para_usuario(conn, documento_id: int, usu
                 FROM preguntas p
                 JOIN documentos d ON p.documento_id = d.id
                 LEFT JOIN estadisticas_respuestas er
-                    ON p.id = er.pregunta_id AND er.documento_id = p.documento_id -- Asegurar que la respuesta sea para esta pregunta y doc
+                    ON p.id = er.pregunta_id AND er.documento_id = p.documento_id
                 WHERE p.documento_id = %s
                 GROUP BY p.id, p.question, d.nombre
                 ORDER BY p.id;
-            """, (usuario_id, usuario_id, usuario_id, usuario_id, documento_id))
-            # Los COALESCE y el LEFT JOIN aseguran que todas las preguntas del documento aparezcan,
-            # con 0s para las métricas del usuario si no ha respondido.
+            """,
+                (usuario_id, usuario_id, usuario_id, usuario_id, documento_id),
+            )
+
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {db_err}",
+            exc_info=True,
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
         return []
     except Exception as e:
-        logger.error(f"Error inesperado en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {e}",
+            exc_info=True,
+        )
         return []
 
 
@@ -116,12 +144,13 @@ def obtener_estadisticas_agregadas_por_documento(conn, documento_id: int):
         return []
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     p.id AS pregunta_id,
                     p.question AS pregunta_texto,
                     d.nombre AS documento_nombre,
-                    COUNT(er.id) AS total_respuestas_global, -- Total de intentos para esta pregunta por todos
+                    COUNT(er.id) AS total_respuestas_global,
                     COALESCE(SUM(CASE WHEN er.es_correcta THEN 1 ELSE 0 END), 0) AS total_correctas_global,
                     COALESCE(SUM(CASE WHEN NOT er.es_correcta THEN 1 ELSE 0 END), 0) AS total_incorrectas_global,
                     COALESCE(AVG(er.tiempo_respuesta_seconds), 0.0) AS tiempo_promedio_global_secs,
@@ -132,14 +161,23 @@ def obtener_estadisticas_agregadas_por_documento(conn, documento_id: int):
                 WHERE p.documento_id = %s
                 GROUP BY p.id, p.question, d.nombre
                 ORDER BY p.id;
-            """, (documento_id,))
+            """,
+                (documento_id,),
+            )
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB en estadísticas agregadas por documento ID {documento_id}: {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB en estadísticas agregadas por documento ID {documento_id}: {db_err}",
+            exc_info=True,
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
         return []
     except Exception as e:
-        logger.error(f"Error inesperado en estadísticas agregadas por documento ID {documento_id}: {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado en estadísticas agregadas por documento ID {documento_id}: {e}",
+            exc_info=True,
+        )
         return []
 
 
@@ -165,18 +203,26 @@ def obtener_estadisticas_globales_todas_las_preguntas(conn):
                     COUNT(DISTINCT er.usuario_id) AS usuarios_unicos_intentaron
                 FROM preguntas p
                 LEFT JOIN documentos d ON p.documento_id = d.id
-                LEFT JOIN estadisticas_respuestas er ON p.id = er.pregunta_id -- Asume que er.documento_id es igual a p.documento_id
+                LEFT JOIN estadisticas_respuestas er ON p.id = er.pregunta_id
                 GROUP BY p.id, p.question, p.documento_id, d.nombre, d.curso_tag, d.grado_tag
                 ORDER BY d.nombre, p.id;
             """)
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB obteniendo estadísticas globales de todas las preguntas: {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB obteniendo estadísticas globales de todas las preguntas: {db_err}",
+            exc_info=True,
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
         return []
     except Exception as e:
-        logger.error(f"Error inesperado obteniendo estadísticas globales de todas las preguntas: {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado obteniendo estadísticas globales de todas las preguntas: {e}",
+            exc_info=True,
+        )
         return []
+
 
 def obtener_resumen_actividad_general(conn):
     """
@@ -184,53 +230,69 @@ def obtener_resumen_actividad_general(conn):
     (Similar a get_user_activity_summary de database.py, pero puede enfocarse en otros aspectos).
     """
     summary = {
-        'total_usuarios_registrados': 0, # Si tuvieras una tabla de usuarios explícita
-        'sesiones_activas_hoy': 0, # Ejemplo de métrica avanzada
-        'total_documentos_cargados': 0,
-        'total_preguntas_generadas': 0,
-        'total_respuestas_registradas': 0,
-        'feedback_promedio_rating': None,
-        'total_feedback_enviado': 0,
+        "total_usuarios_registrados": 0,
+        "sesiones_activas_hoy": 0,
+        "total_documentos_cargados": 0,
+        "total_preguntas_generadas": 0,
+        "total_respuestas_registradas": 0,
+        "feedback_promedio_rating": None,
+        "total_feedback_enviado": 0,
     }
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Ejemplo: total de usuarios únicos que han interactuado (respondido algo)
-            cur.execute("SELECT COUNT(DISTINCT usuario_id) as usuarios_interactuado FROM estadisticas_respuestas;")
+            cur.execute(
+                "SELECT COUNT(DISTINCT usuario_id) as usuarios_interactuado FROM estadisticas_respuestas;"
+            )
             res = cur.fetchone()
-            summary['usuarios_con_respuestas'] = res['usuarios_interactuado'] if res else 0
+            summary["usuarios_con_respuestas"] = (
+                res["usuarios_interactuado"] if res else 0
+            )
 
             cur.execute("SELECT COUNT(id) as total_documentos FROM documentos;")
             res = cur.fetchone()
-            summary['total_documentos_cargados'] = res['total_documentos'] if res else 0
+            summary["total_documentos_cargados"] = res["total_documentos"] if res else 0
 
             cur.execute("SELECT COUNT(id) as total_preguntas FROM preguntas;")
             res = cur.fetchone()
-            summary['total_preguntas_generadas'] = res['total_preguntas'] if res else 0
+            summary["total_preguntas_generadas"] = res["total_preguntas"] if res else 0
 
-            cur.execute("SELECT COUNT(id) as total_respuestas FROM estadisticas_respuestas;")
+            cur.execute(
+                "SELECT COUNT(id) as total_respuestas FROM estadisticas_respuestas;"
+            )
             res = cur.fetchone()
-            summary['total_respuestas_registradas'] = res['total_respuestas'] if res else 0
+            summary["total_respuestas_registradas"] = (
+                res["total_respuestas"] if res else 0
+            )
 
-            cur.execute("SELECT AVG(rating) as avg_rating, COUNT(id) as total_feedback FROM feedback_usuario WHERE rating IS NOT NULL;")
+            cur.execute(
+                "SELECT AVG(rating) as avg_rating, COUNT(id) as total_feedback FROM feedback_usuario WHERE rating IS NOT NULL;"
+            )
             res = cur.fetchone()
             if res:
-                summary['feedback_promedio_rating'] = res['avg_rating']
-                summary['total_feedback_enviado'] = res['total_feedback']
+                summary["feedback_promedio_rating"] = res["avg_rating"]
+                summary["total_feedback_enviado"] = res["total_feedback"]
 
-            # Puedes añadir más consultas para otras métricas
             return summary
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB obteniendo resumen de actividad general: {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB obteniendo resumen de actividad general: {db_err}", exc_info=True
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
     except Exception as e:
-        logger.error(f"Error inesperado obteniendo resumen de actividad general: {e}", exc_info=True)
-    return summary # Devuelve el summary incluso si algunas consultas fallan, con los valores por defecto
+        logger.error(
+            f"Error inesperado obteniendo resumen de actividad general: {e}",
+            exc_info=True,
+        )
+    return summary
+
 
 def obtener_documentos_mas_usados(conn, limit=10):
     """Obtiene los documentos más usados basados en el número de quiz_attempts."""
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     d.id as documento_id,
                     d.nombre as documento_nombre,
@@ -240,14 +302,19 @@ def obtener_documentos_mas_usados(conn, limit=10):
                 GROUP BY d.id, d.nombre
                 ORDER BY numero_intentos_cuestionario DESC
                 LIMIT %s;
-            """, (limit,))
+            """,
+                (limit,),
+            )
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(f"Error DB obteniendo documentos más usados: {db_err}", exc_info=True)
-        if "transaction is aborted" in str(db_err).lower(): conn.rollback()
+        logger.error(
+            f"Error DB obteniendo documentos más usados: {db_err}", exc_info=True
+        )
+        if "transaction is aborted" in str(db_err).lower():
+            conn.rollback()
         return []
     except Exception as e:
-        logger.error(f"Error inesperado obteniendo documentos más usados: {e}", exc_info=True)
+        logger.error(
+            f"Error inesperado obteniendo documentos más usados: {e}", exc_info=True
+        )
         return []
-
-# --- FIN DE estadisticas.py ---
