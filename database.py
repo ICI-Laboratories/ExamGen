@@ -503,14 +503,9 @@ def registrar_progreso(
             num_inserted = cur.rowcount
         conn.commit()
         if num_inserted > 0:
-            logger.info(
-                f"{num_inserted} progresos registrados para usuario '{usuario_id}', doc ID {documento_id}."
-            )
-    except Exception as e:
-        logger.error(
-            f"Error en registrar_progreso para usuario '{usuario_id}', doc {documento_id}: {e}",
-            exc_info=True,
-        )
+            logger.info("User progress records added; count=%d.", num_inserted)
+    except Exception:
+        logger.error("User progress write failed.")
         conn.rollback()
         raise
     return num_inserted
@@ -528,14 +523,9 @@ def reiniciar_progreso(conn, usuario_id: str, documento_id: int):
             )
             rows_deleted = cur.rowcount
         conn.commit()
-        logger.info(
-            f"Progreso reiniciado para usuario '{usuario_id}', doc ID {documento_id}. Registros eliminados: {rows_deleted}."
-        )
-    except Exception as e:
-        logger.error(
-            f"Error en reiniciar_progreso para usuario '{usuario_id}', doc {documento_id}: {e}",
-            exc_info=True,
-        )
+        logger.info("User progress reset; deleted_count=%d.", rows_deleted)
+    except Exception:
+        logger.error("User progress reset failed.")
         conn.rollback()
         raise
 
@@ -554,10 +544,7 @@ def obtener_ids_preguntas_respondidas_correctamente(
             )
             return [row[0] for row in cur.fetchall()]
     except Exception as e:
-        logger.error(
-            f"Error obteniendo IDs respondidos para usuario '{usuario_id}', doc {documento_id}: {e}",
-            exc_info=True,
-        )
+        logger.error("User progress lookup failed.")
         if "transaction is aborted" in str(e).lower():
             conn.rollback()
         raise
@@ -589,10 +576,7 @@ def obtener_preguntas_aleatorias_para_cuestionario(
             preguntas_no_respondidas = cur.fetchall()
         return preguntas_no_respondidas
     except Exception as e:
-        logger.error(
-            f"Error en obtener_preguntas_aleatorias (doc {documento_id}, user '{usuario_id}'): {e}",
-            exc_info=True,
-        )
+        logger.error("Question selection failed.")
         if "transaction is aborted" in str(e).lower():
             conn.rollback()
         raise
@@ -628,11 +612,8 @@ def registrar_respuesta_estadistica(
                 ),
             )
         conn.commit()
-    except Exception as e:
-        logger.error(
-            f"Error en registrar_respuesta_estadistica para user '{usuario_id}', q_id {pregunta_id}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Answer statistics write failed.")
         conn.rollback()
         raise
 
@@ -670,11 +651,8 @@ def log_generation_attempt(
                 ),
             )
         conn.commit()
-    except Exception as e:
-        logger.error(
-            f"Fallo al registrar intento de generación para archivo '{filename}': {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Generation attempt write failed.")
         conn.rollback()
 
 
@@ -716,15 +694,10 @@ def crear_quiz_attempt(
             )
             attempt_id = cur.fetchone()[0]
             conn.commit()
-            logger.info(
-                f"Nuevo quiz_attempt creado ID: {attempt_id} para user '{user_id}', doc {documento_id}."
-            )
+            logger.info("Quiz attempt created.")
             return attempt_id
-    except Exception as e:
-        logger.error(
-            f"Error creando quiz_attempt para user '{user_id}', doc {documento_id}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Quiz attempt creation failed.")
         conn.rollback()
         raise
 
@@ -779,15 +752,10 @@ def registrar_inicio_sesion_db(conn, usuario_id: str):
             )
             session_db_id = cur.fetchone()[0]
             conn.commit()
-            logger.info(
-                f"Inicio de sesión registrado en BD para {usuario_id}, session_db_id: {session_db_id}"
-            )
+            logger.info("Product session start recorded.")
             return session_db_id
-    except Exception as e:
-        logger.error(
-            f"Error al registrar inicio de sesión en BD para {usuario_id}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Product session start write failed.")
         conn.rollback()
         raise
 
@@ -877,14 +845,9 @@ def registrar_feedback(
                 ),
             )
             conn.commit()
-            logger.info(
-                f"Feedback registrado para usuario '{usuario_id}', tipo: {feedback_type}."
-            )
-    except Exception as e:
-        logger.error(
-            f"Error registrando feedback para usuario '{usuario_id}': {e}",
-            exc_info=True,
-        )
+            logger.info("User feedback recorded.")
+    except Exception:
+        logger.error("User feedback write failed.")
         conn.rollback()
         raise
 

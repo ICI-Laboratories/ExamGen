@@ -1,10 +1,15 @@
+import logging
+
 import streamlit as st
+
+import auth_helpers as auth
 from database import (
     get_db_connection,
-    registrar_inicio_sesion_db,
     registrar_fin_sesion_db,
+    registrar_inicio_sesion_db,
 )
-import logging
+
+logger = logging.getLogger(__name__)
 
 
 st.set_page_config(
@@ -14,9 +19,15 @@ st.set_page_config(
 )
 
 
-if not st.user.is_logged_in:
-    st.warning("Necesitas iniciar sesión para usar esta aplicación.")
-    st.button("Iniciar sesión con Google", on_click=st.login)
+user_info = auth.ensure_authenticated(
+    login_title="Bienvenido a MemorIA",
+    login_message="Inicia sesión con tu cuenta central de SARA para continuar.",
+)
+try:
+    user_identity = auth.get_data_identity(user_info)
+except auth.AuthError:
+    logger.error("Central identity mapping rejected.")
+    st.error("No se pudo abrir el historial de esta cuenta.")
     st.stop()
 
 
@@ -26,19 +37,17 @@ try:
     conn = get_db_connection()
     db_ready = conn is not None
     if db_ready and "current_user_session_db_id" not in st.session_state:
-        session_db_id = registrar_inicio_sesion_db(conn, st.user.email)
+        session_db_id = registrar_inicio_sesion_db(conn, user_identity)
         st.session_state.current_user_session_db_id = session_db_id
-except Exception as e:
+except Exception:
     db_ready = False
-    logging.error(
-        f"Error crítico al conectar o inicializar sesión en BD: {e}", exc_info=True
-    )
+    logger.error("Database connection or session initialization failed.")
     st.error(
         "Error crítico al conectar con la base de datos. Por favor, contacta al administrador."
     )
     st.stop()
 
-st.title(f"Bienvenido a MemorIA, {st.user.name}")
+st.title(f"Bienvenido a MemorIA, {auth.display_name(user_info)}")
 
 st.markdown("""
 Esta aplicación utiliza modelos de lenguaje locales (a través de LM Studio) y OCR
@@ -59,28 +68,20 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Información de Usuario")
-    try:
-        st.write(f"Usuario: **{st.user.name}**")
-        st.caption(st.user.email)
-
-        def logout_and_record():
-            session_to_close = st.session_state.get("current_user_session_db_id")
-
+    st.write(f"Usuario: **{auth.display_name(user_info)}**")
+    email = user_info.get("email")
+    if isinstance(email, str) and email:
+        st.caption(email)
+    if st.button("Cerrar Sesión", key="logout_button_sidebar"):
+        session_to_close = st.session_state.get("current_user_session_db_id")
+        try:
             current_conn = get_db_connection()
             if current_conn and session_to_close:
                 registrar_fin_sesion_db(current_conn, session_to_close)
-
-            if "current_user_session_db_id" in st.session_state:
-                del st.session_state["current_user_session_db_id"]
-
-            st.logout()
-
-        st.button(
-            "Cerrar Sesión", on_click=logout_and_record, key="logout_button_sidebar"
-        )
-    except Exception as e:
-        st.error("Hubo un problema al mostrar la información del usuario.")
-        logging.error(f"Error en sidebar con info de usuario: {e}", exc_info=True)
+        except Exception:
+            logger.warning("Product session close could not be recorded.")
+        auth.logout()
+        st.rerun()
 
     st.sidebar.divider()
     st.sidebar.caption("ExamGen")

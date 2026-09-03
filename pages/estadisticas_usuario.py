@@ -1,27 +1,33 @@
-import streamlit as st
-import pandas as pd
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
-import logging
+import pandas as pd
+import streamlit as st
+
+import auth_helpers as auth
 from database import get_db_connection, obtener_documentos_cargados
 from estadisticas import (
+    obtener_estadisticas_por_documento_para_usuario,
     obtener_pregunta_mas_equivocada_usuario,
     obtener_promedio_tiempo_respuesta_usuario,
-    obtener_estadisticas_por_documento_para_usuario,
 )
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.setLevel(logging.INFO)
 
-if not st.user.is_logged_in:
-    st.warning("Por favor, inicia sesión para ver tus estadísticas personales.")
-    if st.button("Iniciar sesión"):
-        st.login()
+user_info = auth.ensure_authenticated(
+    login_message="Inicia sesión con SARA para ver tus estadísticas personales."
+)
+try:
+    user_identity = auth.get_data_identity(user_info)
+except auth.AuthError:
+    logger.error("Central identity mapping rejected.")
+    st.error("No se pudo abrir el historial de esta cuenta.")
     st.stop()
 
-user_email = st.user.email
-st.header(f"Estadísticas Personales ({user_email})")
+st.header(f"Estadísticas Personales ({auth.display_name(user_info)})")
 
 conn = get_db_connection()
 if not conn:
@@ -33,10 +39,10 @@ if not conn:
 st.subheader("Resumen General Personal")
 try:
     pregunta_mas_errada_info = obtener_pregunta_mas_equivocada_usuario(
-        conn, usuario_id=user_email
+        conn, usuario_id=user_identity
     )
     promedio_tiempo_seg = obtener_promedio_tiempo_respuesta_usuario(
-        conn, usuario_id=user_email
+        conn, usuario_id=user_identity
     )
 
     col1, col2 = st.columns(2)
@@ -76,10 +82,7 @@ try:
 
 except Exception as e:
     st.error(f"Ocurrió un error al cargar tus estadísticas generales personales: {e}")
-    logger.error(
-        f"Error en UI - Estadísticas Generales Personales para {user_email}: {e}",
-        exc_info=True,
-    )
+    logger.error("Personal statistics rendering failed.")
 
 st.divider()
 
@@ -118,7 +121,7 @@ try:
                 )
 
                 user_doc_stats_data = obtener_estadisticas_por_documento_para_usuario(
-                    conn, documento_id_seleccionado, user_email
+                    conn, documento_id_seleccionado, user_identity
                 )
 
                 if user_doc_stats_data:
@@ -266,12 +269,4 @@ try:
 
 except Exception as e:
     st.error(f"Ocurrió un error al cargar las estadísticas por documento: {e}")
-    doc_name_for_log = (
-        doc_nombre_seleccionado
-        if "doc_nombre_seleccionado" in locals() and doc_nombre_seleccionado
-        else "N/A"
-    )
-    logger.error(
-        f"Error en UI - Estadísticas por Documento para {user_email}, Doc: {doc_name_for_log}: {e}",
-        exc_info=True,
-    )
+    logger.error("Per-document personal statistics rendering failed.")

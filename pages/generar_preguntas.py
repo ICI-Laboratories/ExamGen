@@ -1,27 +1,37 @@
+import hashlib
 import logging
+import time
+
 import streamlit as st
+
+import auth_helpers as auth
 from database import (
     get_db_connection,
+    get_page_contents_for_document,
+    insert_page_contents,
     insertar_documento,
     insertar_preguntas_json,
     log_generation_attempt,
-    insert_page_contents,
-    get_page_contents_for_document,
 )
-from ocr import extract_text_and_pages_with_ocr
 from lmstudio_api import generate_questions_with_lmstudio
+from ocr import extract_text_and_pages_with_ocr
 from validation import is_valid_json, schema
-import time
-import hashlib
 
-if not st.user.is_logged_in:
-    st.warning("Por favor, inicia sesión para generar preguntas.")
+logger = logging.getLogger(__name__)
+
+user_info = auth.ensure_authenticated(
+    login_message="Inicia sesión con SARA para generar preguntas."
+)
+try:
+    user_identity = auth.get_data_identity(user_info)
+except auth.AuthError:
+    logger.error("Central identity mapping rejected.")
+    st.error("No se pudo abrir el historial de esta cuenta.")
     st.stop()
 
 st.header("Generador de Preguntas desde PDF")
 
-user_email = st.user.email
-st.caption(f"Usuario: {user_email}")
+st.caption(f"Usuario: {auth.display_name(user_info)}")
 
 
 CHARS_PER_TOKEN_ESTIMATE = 4
@@ -43,7 +53,7 @@ def truncate_text_by_tokens(text, max_tokens):
         last_period = truncated.rfind(".")
         if last_period != -1:
             truncated = truncated[: last_period + 1]
-        logging.warning(
+        logger.warning(
             f"Context truncated from {len(text)} chars to {len(truncated)} chars to fit token limit."
         )
         return truncated
@@ -115,7 +125,7 @@ if uploaded_file and not st.session_state.gen_ocr_done:
         st.error(f"Error durante OCR o guardado inicial: {e}")
         log_generation_attempt(
             conn,
-            usuario_id=user_email,
+            usuario_id=user_identity,
             filename=uploaded_file.name,
             ocr_success=False,
             llm_success=False,
@@ -253,7 +263,7 @@ if st.session_state.gen_ocr_done and st.session_state.gen_doc_id:
             total_duration = time.time() - start_generation_time
             log_generation_attempt(
                 conn,
-                usuario_id=user_email,
+                usuario_id=user_identity,
                 filename=uploaded_file.name,
                 ocr_success=True,
                 llm_success=llm_success,

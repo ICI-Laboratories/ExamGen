@@ -1,60 +1,42 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
 import logging
 from datetime import timedelta
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import streamlit as st
+
+import auth_helpers as auth
 from database import (
     get_db_connection,
     get_generation_logs,
-    obtener_documentos_cargados,
     get_overall_document_stats,
+    obtener_documentos_cargados,
 )
 from estadisticas import (
+    obtener_documentos_mas_usados,
     obtener_estadisticas_globales_todas_las_preguntas,
     obtener_resumen_actividad_general,
-    obtener_documentos_mas_usados,
 )
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.setLevel(logging.INFO)
 
-if not st.user.is_logged_in:
-    st.warning("Por favor, inicia sesión para acceder a esta funcionalidad.")
-    if st.button("Iniciar sesión"):
-        st.login()
-    st.stop()
-
-is_admin = False
+user_info = auth.ensure_authenticated(
+    login_message="Inicia sesión con SARA para acceder al dashboard administrativo."
+)
 try:
-    admin_config = st.secrets.get("auth", {})
-    admin_email_list = admin_config.get("admin_emails", [])
-
-    if not isinstance(admin_email_list, list):
-        logger.error(
-            "La configuración 'admin_emails' en secrets.toml ([auth]) no es una lista válida."
-        )
-        st.error("Error interno de configuración de permisos.")
-        st.stop()
-
-    current_user_email = st.user.email.lower()
-    authorized_admins = [email.lower() for email in admin_email_list]
-
-    if current_user_email in authorized_admins:
-        is_admin = True
-    else:
+    if not auth.is_admin(user_info):
+        logger.warning("Admin dashboard access denied.")
         st.error("Acceso denegado.")
-        st.warning(
-            f"El usuario **{st.user.email}** no tiene permisos para acceder a esta sección."
-        )
         st.stop()
-except Exception as e:
-    logger.error(f"Error al verificar permisos de administrador: {e}", exc_info=True)
+except auth.AuthError:
+    logger.error("Central administrator policy configuration rejected.")
     st.error("Ocurrió un error al verificar tus permisos.")
     st.stop()
 
 st.header("Admin Dashboard")
-st.success(f"Acceso de administrador concedido para: {st.user.email}")
+st.success(f"Acceso de administrador concedido para: {auth.display_name(user_info)}")
 st.markdown("*Supervisión del sistema y estadísticas agregadas.*")
 
 conn = get_db_connection()

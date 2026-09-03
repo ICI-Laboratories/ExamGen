@@ -1,29 +1,35 @@
+import json
+import time
+from datetime import datetime
+
 import streamlit as st
+
+import auth_helpers as auth
 from database import (
+    actualizar_quiz_attempt_final,
+    crear_quiz_attempt,
     get_db_connection,
     obtener_documentos_cargados,
+    obtener_preguntas_aleatorias_para_cuestionario,
     obtener_preguntas_por_documento,
-    reiniciar_progreso,
     registrar_progreso,
     registrar_respuesta_estadistica,
-    obtener_preguntas_aleatorias_para_cuestionario,
-    crear_quiz_attempt,
-    actualizar_quiz_attempt_final,
+    reiniciar_progreso,
 )
 from utils import enumerar_opciones
-import json
-from datetime import datetime
-import time
 
-
-if not st.user.is_logged_in:
-    st.warning("Por favor, inicia sesión para realizar el cuestionario.")
+user_info = auth.ensure_authenticated(
+    login_message="Inicia sesión con SARA para realizar el cuestionario."
+)
+try:
+    user_identity = auth.get_data_identity(user_info)
+except auth.AuthError:
+    st.error("No se pudo abrir el historial de esta cuenta.")
     st.stop()
 
 st.header("Recuperación Activa - Cuestionario")
 
-user_email = st.user.email
-st.caption(f"Usuario: {user_email}")
+st.caption(f"Usuario: {auth.display_name(user_info)}")
 
 conn = get_db_connection()
 if not conn:
@@ -58,7 +64,7 @@ st.info(
     f"Documento seleccionado: **{doc_nombre_seleccionado}** (ID: {documento_id_seleccionado})"
 )
 
-state_prefix = f"quiz_{user_email}_{documento_id_seleccionado}_"
+state_prefix = f"quiz_{user_identity}_{documento_id_seleccionado}_"
 
 
 def init_session_state_key(key, value):
@@ -98,7 +104,7 @@ try:
             SELECT COUNT(DISTINCT pregunta_id) FROM progreso_usuario
             WHERE usuario_id = %s AND documento_id = %s
         """,
-            (user_email, documento_id_seleccionado),
+            (user_identity, documento_id_seleccionado),
         )
         initial_correct_count = cur.fetchone()[0]
         init_session_state_key("total_answered_correctly", initial_correct_count)
@@ -136,7 +142,7 @@ with col_btn1:
             )
             attempt_id = crear_quiz_attempt(
                 conn,
-                user_email,
+                user_identity,
                 documento_id_seleccionado,
                 NUM_QUESTIONS_PER_BATCH,
                 current_progress_percentage,
@@ -144,7 +150,7 @@ with col_btn1:
             st.session_state[state_prefix + "current_quiz_attempt_id"] = attempt_id
 
             preguntas_nuevas = obtener_preguntas_aleatorias_para_cuestionario(
-                conn, documento_id_seleccionado, user_email, NUM_QUESTIONS_PER_BATCH
+                conn, documento_id_seleccionado, user_identity, NUM_QUESTIONS_PER_BATCH
             )
             st.session_state[state_prefix + "preguntas_actuales"] = preguntas_nuevas
             st.session_state[state_prefix + "questions_presented_in_batch"] = len(
@@ -175,7 +181,7 @@ with col_btn3:
         help="Borra tu progreso y respuestas para este documento",
     ):
         try:
-            reiniciar_progreso(conn, user_email, documento_id_seleccionado)
+            reiniciar_progreso(conn, user_identity, documento_id_seleccionado)
 
             keys_to_clear = [k for k in st.session_state if k.startswith(state_prefix)]
             for key in keys_to_clear:
@@ -279,7 +285,7 @@ if preguntas_a_mostrar:
                     try:
                         registrar_respuesta_estadistica(
                             conn=conn,
-                            usuario_id=user_email,
+                            usuario_id=user_identity,
                             pregunta_id=pregunta_actual["id"],
                             documento_id=documento_id_seleccionado,
                             quiz_attempt_id=current_quiz_attempt_id,
@@ -303,7 +309,7 @@ if preguntas_a_mostrar:
                     try:
                         num_newly_correct = registrar_progreso(
                             conn,
-                            user_email,
+                            user_identity,
                             documento_id_seleccionado,
                             preguntas_correctas_ids,
                         )

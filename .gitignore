@@ -9,6 +9,8 @@ env/
 .env/
 .streamlit/
 .ruff_cache/
+.data/
+legacy_identities.json
 
 build/
 dist/

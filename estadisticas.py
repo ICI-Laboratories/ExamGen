@@ -33,19 +33,13 @@ def obtener_pregunta_mas_equivocada_usuario(conn, usuario_id: str):
             )
             return cur.fetchone()
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB obteniendo pregunta más equivocada para '{usuario_id}': {db_err}",
-            exc_info=True,
-        )
+        logger.error("Personal missed-question query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
 
         return None
-    except Exception as e:
-        logger.error(
-            f"Error inesperado obteniendo pregunta más equivocada para '{usuario_id}': {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Personal missed-question query failed.")
         return None
 
 
@@ -72,18 +66,12 @@ def obtener_promedio_tiempo_respuesta_usuario(conn, usuario_id: str):
                 else None
             )
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB obteniendo promedio tiempo respuesta para '{usuario_id}': {db_err}",
-            exc_info=True,
-        )
+        logger.error("Personal response-time query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
         return None
-    except Exception as e:
-        logger.error(
-            f"Error inesperado obteniendo promedio tiempo respuesta para '{usuario_id}': {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Personal response-time query failed.")
         return None
 
 
@@ -121,18 +109,12 @@ def obtener_estadisticas_por_documento_para_usuario(
 
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {db_err}",
-            exc_info=True,
-        )
+        logger.error("Personal document-statistics query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
         return []
-    except Exception as e:
-        logger.error(
-            f"Error inesperado en estadísticas por documento para usuario '{usuario_id}', doc ID {documento_id}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Personal document-statistics query failed.")
         return []
 
 
@@ -166,18 +148,12 @@ def obtener_estadisticas_agregadas_por_documento(conn, documento_id: int):
             )
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB en estadísticas agregadas por documento ID {documento_id}: {db_err}",
-            exc_info=True,
-        )
+        logger.error("Aggregate document-statistics query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
         return []
-    except Exception as e:
-        logger.error(
-            f"Error inesperado en estadísticas agregadas por documento ID {documento_id}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Aggregate document-statistics query failed.")
         return []
 
 
@@ -209,18 +185,12 @@ def obtener_estadisticas_globales_todas_las_preguntas(conn):
             """)
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB obteniendo estadísticas globales de todas las preguntas: {db_err}",
-            exc_info=True,
-        )
+        logger.error("Global question-statistics query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
         return []
-    except Exception as e:
-        logger.error(
-            f"Error inesperado obteniendo estadísticas globales de todas las preguntas: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("Global question-statistics query failed.")
         return []
 
 
@@ -274,16 +244,11 @@ def obtener_resumen_actividad_general(conn):
 
             return summary
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB obteniendo resumen de actividad general: {db_err}", exc_info=True
-        )
+        logger.error("General activity summary query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
-    except Exception as e:
-        logger.error(
-            f"Error inesperado obteniendo resumen de actividad general: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.error("General activity summary query failed.")
     return summary
 
 
@@ -307,14 +272,10 @@ def obtener_documentos_mas_usados(conn, limit=10):
             )
             return cur.fetchall()
     except psycopg2.Error as db_err:
-        logger.error(
-            f"Error DB obteniendo documentos más usados: {db_err}", exc_info=True
-        )
+        logger.error("Most-used documents query failed.")
         if "transaction is aborted" in str(db_err).lower():
             conn.rollback()
         return []
-    except Exception as e:
-        logger.error(
-            f"Error inesperado obteniendo documentos más usados: {e}", exc_info=True
-        )
+    except Exception:
+        logger.error("Most-used documents query failed.")
         return []
